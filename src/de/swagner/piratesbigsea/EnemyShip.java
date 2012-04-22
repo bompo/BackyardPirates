@@ -103,7 +103,7 @@ public class EnemyShip {
 				goAway(player.body.getWorldCenter());
 			}
 			
-//			System.out.println(state);
+			System.out.println(state);
 		}
 		return 0;
 
@@ -126,14 +126,14 @@ public class EnemyShip {
 		}
 
 		if (body.getWorldCenter().add(
-				body.getWorldVector(new Vector2(0, 10f))).cpy().crs(target_direction) > 0) {
+				body.getWorldVector(new Vector2(0, 1f))).cpy().crs(target_direction) > 0) {
 			turn(1);
 		} else {
 			turn(-1);
 		}
 
 		if (body.getWorldCenter().add(
-				body.getWorldVector(new Vector2(0, 10f))).cpy().nor().dot(target_direction) < 0 || isAway) {
+				body.getWorldVector(new Vector2(0, 1f)).cpy()).nor().dot(target_direction) < 0 || isAway) {
 			thrust();
 		}
 	}

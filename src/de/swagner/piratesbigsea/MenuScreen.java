@@ -305,7 +305,7 @@ public class MenuScreen extends DefaultScreen implements InputProcessor {
 		
 		batch.begin();
 		font.drawMultiLine(batch, "Controls\nWASD/Directional Keys: Move\nCRTL: Fire Right\nSHIFT/SPACE: Fire Left\nF: Fullscreen\nB: Bloom\nG: Sound", 40, 150);
-		font.drawMultiLine(batch, "a game for LD23\nby @twbompo", 650, 70);
+		font.drawMultiLine(batch, "a game for LD23\nby @twbompo", 650, 60);
 		batch.end();
 
 		// FadeInOut
