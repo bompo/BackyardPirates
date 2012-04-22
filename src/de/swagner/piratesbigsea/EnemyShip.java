@@ -103,7 +103,7 @@ public class EnemyShip {
 				goAway(player.body.getWorldCenter());
 			}
 			
-			System.out.println(state);
+//			System.out.println(state);
 		}
 		return 0;
 

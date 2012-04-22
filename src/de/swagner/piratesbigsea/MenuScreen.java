@@ -601,6 +601,9 @@ public class MenuScreen extends DefaultScreen implements InputProcessor {
 		if (keycode == Input.Keys.B) {			
 			Configuration.getInstance().setBloom(!Configuration.getInstance().bloom);			
 		}
+		if (keycode == Input.Keys.G) {			
+			Configuration.getInstance().setSound(!Configuration.getInstance().sound);			
+		}
 
 		return false;
 	}
