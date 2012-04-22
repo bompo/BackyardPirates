@@ -42,21 +42,8 @@
   </applet>
   
   <br/>
-  <p><a href="aurea_oceanus_final.jar">DOWNLAD</a></p>
+  <p><a href="pirates.jar">DOWNLAD</a></p>
   <br/>
-  <p>Collect enough gold and return to the submarine!
-  Beware of the sharks! Run to avoid them!
-  But take into account that you will need more oxygen if you run.</p>
-  <p>made by bompo <a href="https://twitter.com/twbompo">(@twbompo)</a> at ludum dare #22</p>
-  <p>Controls</p>
-  <ul>
-  <li>Mouse/Cursor Keys: look around</li>
-  <li>WASD: move</li>
-  <li>Hold Shift: run</li>
-  <li>F: Fullscreen</li>
-  <li>F8: Screenshot</li>
-  <li>+/-: Brightness</li>
-  </ul>
   <br/>
  
 
