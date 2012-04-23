@@ -24,8 +24,10 @@ public class WaterShaderFog {
 	        "}\n" +
 	        "float waveHeight(float x, float y) {\n" +
 	        "    float height = 0.0;\n" +
-	        "    for (int i = 0; i < numWaves; ++i)\n" +
-	        "        height += wave(i, x, y);\n" +
+	        "    height += wave(0, x, y);\n" +
+	        "    height += wave(1, x, y);\n" +
+	        "    height += wave(2, x, y);\n" +
+	        "    height += wave(3, x, y);\n" +
 	        "    return height;\n" +
 	        "}\n" +
 	        "float dWavedx(int i, float x, float y) {\n" +
@@ -45,10 +47,14 @@ public class WaterShaderFog {
 	        "vec3 waveNormal(float x, float y) {\n" +
 	        "    float dx = 0.0;\n" +
 	        "    float dy = 0.0;\n" +
-	        "    for (int i = 0; i < numWaves; ++i) {\n" +
-	        "        dx += dWavedx(i, x, y);\n" +
-	        "        dy += dWavedy(i, x, y);\n" +
-	        "    }\n" +
+	        "    dx += dWavedx(0, x, y);\n" +
+	        "    dy += dWavedy(0, x, y);\n" +
+	        "    dx += dWavedx(1, x, y);\n" +
+	        "    dy += dWavedy(1, x, y);\n" +
+	        "    dx += dWavedx(2, x, y);\n" +
+	        "    dy += dWavedy(2, x, y);\n" +
+	        "    dx += dWavedx(3, x, y);\n" +
+	        "    dy += dWavedy(3, x, y);\n" +
 	        "    vec3 n = vec3(-dx, -dy, 1.0);\n" +
 	        "    return normalize(n);\n" +
 	        "}\n" +

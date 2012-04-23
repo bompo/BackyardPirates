@@ -35,7 +35,6 @@ import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
-import com.badlogic.gdx.physics.box2d.joints.MouseJoint;
 import com.badlogic.gdx.utils.Array;
 
 import de.swagner.piratesbigsea.com.badlogic.gdx.graphics.g3d.loaders.ModelLoaderRegistry;
@@ -207,7 +206,7 @@ public class GameScreen extends DefaultScreen implements InputProcessor {
 	        float wavelength = .2f * MathUtils.PI / (i + 1);
 	        waterWavelength.add(wavelength);
 	
-	        float speed = 0.000005f + 0.05f*i;
+	        float speed = 0.000005f + 0.04f*i;
 	        waterSpeed.add(speed);
 	        
 	        float angle = MathUtils.random(-MathUtils.PI/3, MathUtils.PI/3);
@@ -521,8 +520,18 @@ public class GameScreen extends DefaultScreen implements InputProcessor {
 
 	public void show() {
 	}
-
+	
+	private float deltaCount = 0;	
+	@Override
 	public void render(float deltaTime) {
+		deltaCount += deltaTime;
+		if(deltaCount > 0.01) {
+			deltaCount = 0;
+			renderFrame(0.02f);
+		}
+	}
+
+	public void renderFrame(float deltaTime) {
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 		delta = Math.min(0.1f, deltaTime);
 
@@ -1003,14 +1012,14 @@ public class GameScreen extends DefaultScreen implements InputProcessor {
 		}
 		
 		if (Gdx.input.isKeyPressed(Keys.SPACE) || Gdx.input.isKeyPressed(Keys.X) || Gdx.input.isKeyPressed(Keys.E) || Gdx.input.isKeyPressed(Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Keys.SHIFT_RIGHT)) {
-			boolean shooted = shoot(player.body.getWorldCenter().add(player.body.getWorldVector(new Vector2(3f,1f))), player.body.getWorldVector(new Vector2(0,1f)).rotate(-90).cpy());
+			boolean shooted = shoot(player.body.getWorldCenter().add(player.body.getWorldVector(new Vector2(-3f,1f))), player.body.getWorldVector(new Vector2(0,1f)).rotate(90).cpy());
 			if(shooted) {
 				player.hitAnimation = 4;
 			}
 		}
 		
 		if (Gdx.input.isKeyPressed(Keys.Z) || Gdx.input.isKeyPressed(Keys.Y) || Gdx.input.isKeyPressed(Keys.Q)  || Gdx.input.isKeyPressed(Keys.CONTROL_RIGHT) || Gdx.input.isKeyPressed(Keys.CONTROL_LEFT)) {
-			boolean shooted = shoot(player.body.getWorldCenter().add(player.body.getWorldVector(new Vector2(-3f,1f))), player.body.getWorldVector(new Vector2(0,1f)).rotate(90).cpy());
+			boolean shooted = shoot(player.body.getWorldCenter().add(player.body.getWorldVector(new Vector2(3f,1f))), player.body.getWorldVector(new Vector2(0,1f)).rotate(-90).cpy());
 			if(shooted) {
 				player.hitAnimation = -4;
 			}

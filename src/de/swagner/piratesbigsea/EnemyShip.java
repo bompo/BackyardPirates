@@ -68,7 +68,7 @@ public class EnemyShip {
 
 			// approach
 			if (state == 0) {
-				goTowards(player.body.getWorldCenter());
+				goTowards(player.body.getWorldCenter().cpy());
 				if (target_distance < APPROACH_DISTANCE) {
 					reviseApproach();
 					state = 1;
@@ -102,8 +102,7 @@ public class EnemyShip {
 			else if (state == 3) {
 				goAway(player.body.getWorldCenter());
 			}
-			
-//			System.out.println(state);
+
 		}
 		return 0;
 
@@ -124,9 +123,8 @@ public class EnemyShip {
 		if (isAway) {
 			target_direction.mul(-1);
 		}
-
-		if (body.getWorldCenter().add(
-				body.getWorldVector(new Vector2(0, 1f))).cpy().crs(target_direction) > 0) {
+		
+		if (body.getWorldVector(new Vector2(0, 1f)).cpy().crs(target_direction) > 0) {
 			turn(1);
 		} else {
 			turn(-1);

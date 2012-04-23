@@ -165,7 +165,7 @@ public class MenuScreen extends DefaultScreen implements InputProcessor {
 	        float wavelength = .15f * MathUtils.PI / (i + 1);
 	        waterWavelength.add(wavelength);
 	
-	        float speed = 0.000005f + 0.05f*i;
+	        float speed = 0.000001f + 0.04f*i;
 	        waterSpeed.add(speed);
 	        
 	        float angle = MathUtils.random(-MathUtils.PI/3, MathUtils.PI/3);
@@ -276,7 +276,17 @@ public class MenuScreen extends DefaultScreen implements InputProcessor {
 	public void show() {
 	}
 
+	private float deltaCount = 0;	
+	@Override
 	public void render(float deltaTime) {
+		deltaCount += deltaTime;
+		if(deltaCount > 0.01) {
+			deltaCount = 0;
+			renderFrame(0.02f);
+		}
+	}
+
+	public void renderFrame(float deltaTime) {
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 		delta = Math.min(0.1f, deltaTime);
 
@@ -587,6 +597,10 @@ public class MenuScreen extends DefaultScreen implements InputProcessor {
 		if (keycode == Input.Keys.ESCAPE || keycode == Input.Keys.BACK) {
 			Gdx.app.exit();
 		}
+		if (keycode == Input.Keys.ENTER || keycode == Input.Keys.SPACE) {	
+			finished = true;
+		}
+		
 		if (keycode == Input.Keys.F) {			
 			if(Gdx.app.getType() == ApplicationType.Desktop) {
 				if(!Gdx.graphics.isFullscreen()) {

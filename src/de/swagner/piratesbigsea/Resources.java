@@ -50,6 +50,7 @@ public class Resources {
 		}
 	
 		waterShaderFog = new ShaderProgram(WaterShaderFog.mVertexShader, WaterShaderFog.mFragmentShader);
+		Gdx.app.log("waterShaderFog: ", waterShaderFog.getLog());
 		if (waterShaderFog.isCompiled() == false) {
 			Gdx.app.log("waterShaderFog: ", waterShaderFog.getLog());
 			Gdx.app.exit();

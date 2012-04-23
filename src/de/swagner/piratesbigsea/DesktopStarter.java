@@ -22,7 +22,7 @@ public class DesktopStarter extends Game {
 		config.fullscreen = false;
 		config.samples = 4;
 		config.useGL20 = true;
-		config.vSyncEnabled = false;
+		config.vSyncEnabled = true;
 		config.useCPUSynch = true;
 		new LwjglApplication(new DesktopStarter(), config);
 	}
