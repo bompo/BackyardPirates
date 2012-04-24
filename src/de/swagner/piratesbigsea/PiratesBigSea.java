@@ -5,6 +5,6 @@ import com.badlogic.gdx.Game;
 public class PiratesBigSea extends Game {
 	@Override
 	public void create() {
-		setScreen(new GameScreen(this));
+		setScreen(new MenuScreen(this));
 	}
 }

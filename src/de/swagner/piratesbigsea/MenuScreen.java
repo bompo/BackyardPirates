@@ -2,7 +2,6 @@ package de.swagner.piratesbigsea;
 
 import java.util.ArrayList;
 
-import bloom.Bloom;
 
 import com.badlogic.gdx.Application.ApplicationType;
 import com.badlogic.gdx.Game;
@@ -34,6 +33,7 @@ import com.badlogic.gdx.utils.Array;
 
 import de.swagner.piratesbigsea.com.badlogic.gdx.graphics.g3d.loaders.ModelLoaderRegistry;
 import de.swagner.piratesbigsea.com.badlogic.gdx.graphics.g3d.model.still.StillModel;
+import de.swagner.piratesbigsea.shader.Bloom;
 
 public class MenuScreen extends DefaultScreen implements InputProcessor {
 
