@@ -8,6 +8,5 @@
 	<classpathentry kind="lib" path="libs/gdx-natives.jar"/>
 	<classpathentry kind="lib" path="libs/gdx-openal.jar"/>
 	<classpathentry kind="lib" path="libs/gdx-sources.jar"/>
-	<classpathentry kind="lib" path="libs/bloom.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
