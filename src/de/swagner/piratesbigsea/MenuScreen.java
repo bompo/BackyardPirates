@@ -2,7 +2,6 @@ package de.swagner.piratesbigsea;
 
 import java.util.ArrayList;
 
-
 import com.badlogic.gdx.Application.ApplicationType;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
@@ -99,13 +98,17 @@ public class MenuScreen extends DefaultScreen implements InputProcessor {
 	Array<Float> waterSpeed = new Array<Float>();
 	Array<Float> waterAngleX = new Array<Float>();
 	Array<Float> waterAngleY = new Array<Float>();
+	
+	private Network network;
 
 	public MenuScreen(Game game) {
 		super(game);
 		Gdx.input.setCatchBackKey(true);
 		Gdx.input.setInputProcessor(this);
 		
-		background = Gdx.audio.newMusic(Gdx.files.internal("data/wind.ogg"));
+		network = Network.getInstance();
+		
+		background = Gdx.audio.newMusic(Gdx.files.internal("data/menu.mp3"));
 		if(Configuration.getInstance().sound) {
 			background.setLooping(true);
 			background.play();
@@ -190,7 +193,7 @@ public class MenuScreen extends DefaultScreen implements InputProcessor {
 
 //		createEnemies();
 
-		player = new Player(world);
+		player = new Player(world,5,5,0);
 	}
 	
 	private void createEnemies() {
@@ -336,7 +339,7 @@ public class MenuScreen extends DefaultScreen implements InputProcessor {
 			blackFade.draw(fadeBatch);
 			fadeBatch.end();
 			if (fade >= 1) {
-				game.setScreen(new GameScreen(game));
+				game.setScreen(new MultiPlayerScreen(game));
 			}
 		}
 	}

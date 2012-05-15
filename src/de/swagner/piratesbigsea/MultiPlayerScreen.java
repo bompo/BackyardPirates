@@ -2,7 +2,6 @@ package de.swagner.piratesbigsea;
 
 import java.util.List;
 
-
 import com.badlogic.gdx.Application.ApplicationType;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
@@ -40,14 +39,13 @@ import de.swagner.piratesbigsea.com.badlogic.gdx.graphics.g3d.loaders.ModelLoade
 import de.swagner.piratesbigsea.com.badlogic.gdx.graphics.g3d.model.still.StillModel;
 import de.swagner.piratesbigsea.shader.Bloom;
 
-public class GameScreen extends DefaultScreen implements InputProcessor {
+public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 
 	float startTime = 0;
 	PerspectiveCamera cam;
 	Frustum camCulling = new Frustum();
 	private World world;
 	
-	private Array<EnemyShip> enemies = new Array<EnemyShip>();
 	private Array<CannonBall> bullets = new Array<CannonBall>();
 	private Array<DeadCannonBall> deadBullets = new Array<DeadCannonBall>();
 	private Array<DeadEnemyShip> deadEnemies = new Array<DeadEnemyShip>();
@@ -110,6 +108,8 @@ public class GameScreen extends DefaultScreen implements InputProcessor {
 	int currentLevel = 1;
 	float winLoseCounter = -1;
 	
+	float syncCounter = 1;
+	
 	// GLES20
 	Matrix4 model = new Matrix4().idt();
 	Matrix4 normal = new Matrix4().idt();
@@ -127,8 +127,12 @@ public class GameScreen extends DefaultScreen implements InputProcessor {
 	
 //	Box2DDebugRenderer debugRenderer;
 
-	public GameScreen(Game game) {
+
+	public MultiPlayerScreen(Game game) {
 		super(game);
+		
+		Network.getInstance().setGameSession(this);
+		
 		Gdx.input.setCatchBackKey(true);
 		Gdx.input.setInputProcessor(this);
 		
@@ -415,33 +419,14 @@ public class GameScreen extends DefaultScreen implements InputProcessor {
 			groundPoly.dispose();
 		}
 
-
-
-		player = new Player(world,5,5,0);
+		if(Network.getInstance().place == 0) {
+			player = new Player(world,5,5,0);
+		} else if (Network.getInstance().place == 1) {
+			player = new Player(world,5,40,180*MathUtils.degreesToRadians);
+		}
+		
 	}
 	
-	private void createEnemies(int howMuch) {
-		PolygonShape boxPoly = new PolygonShape();
-		boxPoly.setAsBox(1.5f, 4f);
-
-		for (int i = 0; i < howMuch; i++) {
-			BodyDef boxBodyDef = new BodyDef();
-			boxBodyDef.type = BodyType.DynamicBody;
-			boxBodyDef.position.x = MathUtils.random(-25, 45);
-			boxBodyDef.position.y = MathUtils.random(-20, 45);
-			boxBodyDef.angularDamping = 1f;
-			boxBodyDef.linearDamping = 1.0f;
-			Body boxBody = world.createBody(boxBodyDef);
-
-			boxBody.createFixture(boxPoly, 1);
-
-			enemies.add(new EnemyShip(boxBody));
-			boxBody.setUserData(enemies.get(enemies.size-1));
-		}
-
-		boxPoly.dispose();
-	}
-
 	public void initRender() {
 		Gdx.graphics.getGL20().glViewport(0, 0, Gdx.graphics.getWidth(),
 				Gdx.graphics.getHeight());
@@ -487,27 +472,34 @@ public class GameScreen extends DefaultScreen implements InputProcessor {
 		
 		if(winLoseCounter<0) {
 			
+			//cleanup
 			boolean found = false;
 			do {
 				found = false;
-				for (int e = 0; e < enemies.size; e++) {
-					world.destroyBody(enemies.get(e).body);
-					enemies.removeIndex(e);
+				for (int e = 0; e < Network.getInstance().enemies.size; e++) {
+					world.destroyBody(Network.getInstance().enemies.get(e).body);
+					Network.getInstance().enemies.removeIndex(e);
 					found = true;
 					break;
 				}
 			} while (found);
+			world.destroyBody(player.body);
 
-			if(win) {
-				currentLevel += 1;
-			} else {
-				player = new Player(world,5,5, 0);
+			if(Network.getInstance().place == 0) {
+				player = new Player(world,5,5,0);
+			} else if (Network.getInstance().place == 1) {
+				player = new Player(world,5,40, 180f*MathUtils.degreesToRadians);
 			}
 			levelCounter = 4;
-			
-			System.out.println(enemies.size);
-			
-			createEnemies(currentLevel);
+				
+			// add Ships for connected Players
+			for(String id:Network.getInstance().connectedIDs.keySet()) {
+				if(Network.getInstance().connectedIDs.get(id) == 0) {
+					Network.getInstance().enemies.add(new NetworkShip(id,Network.getInstance().connectedIDs.get(id),world,5,5,0));
+				} else if (Network.getInstance().connectedIDs.get(id) == 1) {
+					Network.getInstance().enemies.add(new NetworkShip(id,Network.getInstance().connectedIDs.get(id),world, 5, 40, 180f*MathUtils.degreesToRadians));
+				}
+			}
 			win = false;
 			lose = false;
 			winLoseCounter = 5;
@@ -647,16 +639,8 @@ public class GameScreen extends DefaultScreen implements InputProcessor {
 			ball.update(delta);
 		}
 		
-		for(EnemyShip ball:enemies) {
-			int shootcode = ball.update(delta, player);
-			if(shootcode==1) {
-				shootEnemy(ball.body.getWorldCenter().add(ball.body.getWorldVector(new Vector2(3f,1f))), ball.body.getWorldVector(new Vector2(0,1f)).rotate(-90).cpy());
-				ball.hitAnimation = 4;
-			} else if(shootcode==2) {
-				shootEnemy(ball.body.getWorldCenter().add(ball.body.getWorldVector(new Vector2(-3f,1f))), ball.body.getWorldVector(new Vector2(0,1f)).rotate(90).cpy());
-				ball.hitAnimation = -4;
-			}
-			
+		for(NetworkShip ball:Network.getInstance().enemies) {
+			ball.update(delta);
 		}
 		
 		for(DeadEnemyShip ship:deadEnemies) {
@@ -668,8 +652,7 @@ public class GameScreen extends DefaultScreen implements InputProcessor {
 				deadBullets.add(new DeadCannonBall(new Vector3(bullets.get(e).body.getWorldCenter().x,bullets.get(e).body.getWorldCenter().y,0), bullets.get(e).body.getAngle()));
 				
 				world.destroyBody(bullets.get(e).body);
-				bullets.removeIndex(e);
-				
+				bullets.removeIndex(e);				
 			}
 		}		
 		
@@ -681,12 +664,12 @@ public class GameScreen extends DefaultScreen implements InputProcessor {
 			deadEnemies.removeIndex(0);				
 		}		
 		
-		for (int e = 0; e < enemies.size; e++) {
-			if (enemies.get(e).life <= 0 && enemies.get(e).body.getLinearVelocity().len2()<5) {
-				deadEnemies.add(new DeadEnemyShip(new Vector3(enemies.get(e).body.getWorldCenter().x,enemies.get(e).body.getWorldCenter().y,0), enemies.get(e).body.getAngle()));
+		for (int e = 0; e < Network.getInstance().enemies.size; e++) {
+			if (Network.getInstance().enemies.get(e).life <= 0 && Network.getInstance().enemies.get(e).body.getLinearVelocity().len2()<5) {
+				deadEnemies.add(new DeadEnemyShip(new Vector3(Network.getInstance().enemies.get(e).body.getWorldCenter().x,Network.getInstance().enemies.get(e).body.getWorldCenter().y,0), Network.getInstance().enemies.get(e).body.getAngle()));
 				
-				world.destroyBody(enemies.get(e).body);
-				enemies.removeIndex(e);
+				world.destroyBody(Network.getInstance().enemies.get(e).body);
+				Network.getInstance().enemies.removeIndex(e);
 				
 			}
 		}
@@ -697,7 +680,7 @@ public class GameScreen extends DefaultScreen implements InputProcessor {
 			win = false;
 			initLevel();
 		}
-		if(enemies.size<=0) {
+		if(Network.getInstance().enemies.size<=0) {
 			win = true;
 			lose = false;
 			initLevel();
@@ -795,9 +778,9 @@ public class GameScreen extends DefaultScreen implements InputProcessor {
 		boatTex.bind(0);
 		
 		//render enemies
-		for (int i = 0; i < enemies.size; i++) {
+		for (int i = 0; i < Network.getInstance().enemies.size; i++) {
 			
-			EnemyShip box = enemies.get(i);
+			NetworkShip box = Network.getInstance().enemies.get(i);
 			
 			tmp.idt();
 			model.idt();
@@ -915,7 +898,6 @@ public class GameScreen extends DefaultScreen implements InputProcessor {
 		tmp.idt();
 		model.idt();
 
-
 		tmp.setToScaling(0.2f,0.2f,0.2f);
 		model.mul(tmp);
 		
@@ -1014,11 +996,14 @@ public class GameScreen extends DefaultScreen implements InputProcessor {
 				player.state = Player.STATE.RIGHT;
 			}
 		}
+
+		Network.getInstance().sendCurrentState(player, 0);
 		
 		if (Gdx.input.isKeyPressed(Keys.SPACE) || Gdx.input.isKeyPressed(Keys.X) || Gdx.input.isKeyPressed(Keys.E) || Gdx.input.isKeyPressed(Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Keys.SHIFT_RIGHT)) {
 			boolean shooted = shoot(player.body.getWorldCenter().add(player.body.getWorldVector(new Vector2(-3f,1f))), player.body.getWorldVector(new Vector2(0,1f)).rotate(90).cpy());
 			if(shooted) {
 				player.hitAnimation = 4;
+				Network.getInstance().sendCurrentState(player, -1);
 			}
 			
 		}
@@ -1027,7 +1012,15 @@ public class GameScreen extends DefaultScreen implements InputProcessor {
 			boolean shooted = shoot(player.body.getWorldCenter().add(player.body.getWorldVector(new Vector2(3f,1f))), player.body.getWorldVector(new Vector2(0,1f)).rotate(-90).cpy());
 			if(shooted) {
 				player.hitAnimation = -4;
+				Network.getInstance().sendCurrentState(player, 1);
 			}
+		}
+		
+		//sync client with network
+		syncCounter = syncCounter - delta;
+		if(syncCounter < 0) {
+			Network.getInstance().sendSyncState(player);
+			syncCounter = 1;
 		}
 
 	}

@@ -15,8 +15,8 @@ public class DesktopStarter extends Game {
 
 		config.setFromDisplayMode(displayMode);
 
-		config.width = 1280;
-		config.height = 800;
+		config.width = 800;
+		config.height = 480;
 		config.title = "Backyard Pirates - ld23 entry by bompo";
 
 		config.fullscreen = false;

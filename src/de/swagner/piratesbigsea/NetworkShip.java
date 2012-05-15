@@ -1,15 +1,21 @@
 package de.swagner.piratesbigsea;
 
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
 
-public class Player {
-	
+public class NetworkShip {
+
 	public Body body;
+
+	//NETWORK stuff
+	public String id;
+	public Integer place;
+	
 	public float lastShot = 0;
 	public float hitAnimation = 0;
 	public float life = 5;
@@ -23,8 +29,12 @@ public class Player {
 	
 	public float sinkAngle = -1;
 	public float sinkSpeed = MathUtils.random(-1,1);
-	
-	public Player(World world, int x, int y, float angle) {
+
+
+	public NetworkShip(String id, int place, World world, int x, int y, float angle) {
+		this.id = id;
+		this.place = place;
+		
 		PolygonShape boxPoly = new PolygonShape();
 		boxPoly.setAsBox(1.5f, 4f);
 		
@@ -47,8 +57,22 @@ public class Player {
 		// we are done, all that's left is disposing the boxPoly
 		boxPoly.dispose();
 	}
-	
+
+
 	public void update(float delta) {
+		
+		if (state == STATE.UP || state == STATE.UPLEFT || state == STATE.UPRIGHT) {
+			body.applyLinearImpulse(body.getWorldVector(new Vector2(0,1.5f)), body.getWorldCenter());
+		}
+		
+		if (state == STATE.LEFT  || state == STATE.UPLEFT) {
+			body.applyAngularImpulse(-delta*100.f);
+		}
+
+		if (state == STATE.RIGHT  || state == STATE.UPRIGHT) {
+			body.applyAngularImpulse(delta*100.f);
+		}	
+		
 		if(life>0) {
 			lastShot+= delta;
 			if(hitAnimation !=0) {
@@ -71,6 +95,7 @@ public class Player {
 				sinkAngle+=(sinkSpeed*delta);
 			}
 		}
+
 	}
 
 }

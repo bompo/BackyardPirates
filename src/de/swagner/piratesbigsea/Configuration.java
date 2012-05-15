@@ -22,7 +22,7 @@ public class Configuration {
 	private void loadConfig() {
 		fullscreen = preferences.getBoolean("fullscreen", true);
 		bloom = preferences.getBoolean("bloom", true);
-		sound = preferences.getBoolean("sound", false);
+		sound = preferences.getBoolean("sound", true);
 	}
 	
 	public void setConfiguration() {
