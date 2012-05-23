@@ -42,7 +42,7 @@ public class Network {
 	private void connectToServer() {
 		
 		try {
-			socket = new SocketIO("http://92.230.48.157:80/");
+			socket = new SocketIO("http://backyardpirates.nodester.com:80");
 			
 			socket.connect(new IOCallback() {
 		        @Override
@@ -97,6 +97,18 @@ public class Network {
 		                	connectedIDs.put(obj.getString("player"), obj.getInt("count"));
 		                	System.out.println("Player " + obj.getString("player") + ", " + obj.getInt("count") + " connected");
 		                }
+		                if (event.equals("disconnect")) {
+		                	connectedIDs.remove(obj.getString("player"));
+		                	NetworkShip remove = enemies.get(0);
+		                	for(NetworkShip enemie:enemies) {
+		                		if(enemie.id == obj.getString("player")) {
+		                			remove = enemie;
+		                		}
+		                	}
+		                	enemies.removeValue(remove, true);
+		                	System.out.println("Player " + obj.getString("player") + ", " + obj.getInt("count") + " disconnected");
+		                }
+		                
 		                if (event.equals("update")) {
 		                	System.out.println("update");
 		                	for(NetworkShip ship:enemies) {
@@ -156,6 +168,38 @@ public class Network {
 		                		}
 		                	}
 		                }
+		                
+		                if (event.equals("hit")) {
+		                	System.out.println("hit");
+		                	for(NetworkShip ship:enemies) {
+		                		if(ship.id.equalsIgnoreCase(obj.getString("player"))) {
+		                			System.out.println("hit " + ship.id);	
+		                			ship.life = ship.life - 1; 
+		                			
+		                			//sync ship
+		                			Vector2 networkPos = new Vector2((float) obj.getJSONObject("message").getDouble("positionx"),(float) obj.getJSONObject("message").getDouble("positiony"));
+		                			networkPos.sub(ship.body.getPosition());
+		                			Vector2 newPos = ship.body.getPosition().tmp().add(networkPos.mul(0.1f));
+		                			
+		                		
+		                			ship.body.setTransform(newPos.x,newPos.y, (float)obj.getJSONObject("message").getDouble("angle"));
+		                			
+		                			if(obj.getJSONObject("message").getString("state").equalsIgnoreCase("IDLE")) {
+		                				ship.state = NetworkShip.STATE.IDLE;
+		                			} else if(obj.getJSONObject("message").getString("state").equalsIgnoreCase("UP")) {
+		                				ship.state = NetworkShip.STATE.UP;
+		                			} else if(obj.getJSONObject("message").getString("state").equalsIgnoreCase("LEFT")) {
+		                				ship.state = NetworkShip.STATE.LEFT;
+		                			} else if(obj.getJSONObject("message").getString("state").equalsIgnoreCase("RIGHT")) {
+		                				ship.state = NetworkShip.STATE.RIGHT;
+		                			} else if(obj.getJSONObject("message").getString("state").equalsIgnoreCase("UPLEFT")) {
+		                				ship.state = NetworkShip.STATE.UPLEFT;
+		                			} else if(obj.getJSONObject("message").getString("state").equalsIgnoreCase("UPRIGHT")) {
+		                				ship.state = NetworkShip.STATE.UPRIGHT;
+		                			}
+		                		}
+		                	}
+		                }
 		            } catch (Exception ex) {
 		                ex.printStackTrace();
 		            }
@@ -187,6 +231,7 @@ public class Network {
 			json.putOpt("positionx", player.body.getPosition().x);
 			json.putOpt("positiony", player.body.getPosition().y);
 			json.putOpt("angle", player.body.getAngle());
+			json.putOpt("angledir", player.body.getAngularVelocity());
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -212,6 +257,23 @@ public class Network {
 		
 		socket.emit("synchronize", json);
 		currentState = player.state;				
+	}
+	
+	public void sendHit(Player player) {
+		System.out.println("send hit");
+		
+		JSONObject json = new JSONObject();
+        try {
+			json.putOpt("state", player.state);
+			json.putOpt("positionx", player.body.getPosition().x);
+			json.putOpt("positiony", player.body.getPosition().y);
+			json.putOpt("angle", player.body.getAngle());
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		socket.emit("hit", json);			
 	}
 	
 	public static Network getInstance() {

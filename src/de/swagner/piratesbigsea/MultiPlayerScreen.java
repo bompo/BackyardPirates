@@ -470,6 +470,13 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 	private void initLevel() {
 		winLoseCounter -= delta;
 		
+		if(Network.getInstance().connectedIDs.keySet().size() == 0) {
+			win = false;
+			lose = false;
+			winLoseCounter = 5;
+			return;
+		}
+		
 		if(winLoseCounter<0) {
 			
 			//cleanup
@@ -483,7 +490,9 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 					break;
 				}
 			} while (found);
-			world.destroyBody(player.body);
+			if(player.body != null) {
+				world.destroyBody(player.body);
+			}
 
 			if(Network.getInstance().place == 0) {
 				player = new Player(world,5,5,0);
@@ -557,7 +566,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 
 	
 		boolean renderFlag = false;
-		if(levelCounter>1) {
+		if(levelCounter>1 || Network.getInstance().enemies.size < 0) {
 			getReadyTex.bind(0);
 			renderFlag = true;
 			
@@ -1038,7 +1047,8 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 
 					if (a instanceof CannonBall && b instanceof EnemyShip) {
 						if(((CannonBall) a).life < 10) {
-							((EnemyShip) b).life -= 1;
+							// TODO send enemy hit packet
+//							((EnemyShip) b).life -= 1;
 							((CannonBall) a).life = 10;
 							if(Configuration.getInstance().sound) {
 								hit.play();
@@ -1048,7 +1058,8 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 					
 					if (a instanceof EnemyShip && b instanceof CannonBall) {
 						if(((CannonBall) b).life < 10) {
-							((EnemyShip) a).life -= 1;
+							// TODO send enemy hit packet
+//							((EnemyShip) a).life -= 1;
 							((CannonBall) b).life = 10;
 							if(Configuration.getInstance().sound) {
 								hit.play();
@@ -1058,7 +1069,9 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 					
 					if (a instanceof CannonBall && b instanceof Player) {
 						if(((CannonBall) a).life < 10 && ((CannonBall) a).friendly == false) {
+							// TODO send player hit packet
 							((Player) b).life -= 1;
+							Network.getInstance().sendHit(player);
 							((CannonBall) a).life = 10;
 							if(Configuration.getInstance().sound) {
 								hit.play();
@@ -1068,7 +1081,9 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 					
 					if (a instanceof Player && b instanceof CannonBall) {
 						if(((CannonBall) b).life < 10 && ((CannonBall) b).friendly == false) {
+							// TODO send player hit packet
 							((Player) a).life -= 1;
+							Network.getInstance().sendHit(player);
 							((CannonBall) b).life = 10;
 							if(Configuration.getInstance().sound) {
 								hit.play();
