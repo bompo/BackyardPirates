@@ -7,6 +7,7 @@
 	<classpathentry kind="lib" path="libs/gdx-backend-lwjgl.jar"/>
 	<classpathentry kind="lib" path="libs/gdx-natives.jar"/>
 	<classpathentry kind="lib" path="libs/gdx-openal.jar"/>
-	<classpathentry kind="lib" path="libs/gdx-sources.jar"/>
+	<classpathentry kind="lib" path="libs/json-org.jar"/>
+	<classpathentry kind="lib" path="libs/weberknecht-0.1.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
