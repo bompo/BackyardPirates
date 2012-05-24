@@ -104,11 +104,12 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 	float delta;
 	float scale, rotate = 0;
 
-	float levelCounter = 5;
 	int currentLevel = 1;
 	float winLoseCounter = -1;
 	
 	float syncCounter = 1;
+	boolean startRound = false;
+	float startRoundCounter = 1;
 	
 	// GLES20
 	Matrix4 model = new Matrix4().idt();
@@ -228,6 +229,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		
 
 		initLevel();
+		Network.getInstance().sendReady(player);
 		
 	}
 	
@@ -499,7 +501,6 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 			} else if (Network.getInstance().place == 1) {
 				player = new Player(world,5,40, 180f*MathUtils.degreesToRadians);
 			}
-			levelCounter = 4;
 				
 			// add Ships for connected Players
 			for(String id:Network.getInstance().connectedIDs.keySet()) {
@@ -517,6 +518,11 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 
 	private void reset() {
 		initLevel();
+	}
+	
+	public void startNewRound() {
+		startRound = true;
+		startRoundCounter = 1;
 	}
 
 	public void show() {
@@ -541,12 +547,10 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		scale += (MathUtils.sin(startTime) * delta) / 20.f;
 		rotate += (MathUtils.cos(startTime) * delta) / 10.f;
 
-		if(levelCounter<0) {
+		if(startRound) {
 			processInput();
 			doPhysics();
 			updateAI();
-		} else {
-			levelCounter -= delta;
 		}
 		
 		cam.update();
@@ -566,11 +570,12 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 
 	
 		boolean renderFlag = false;
-		if(levelCounter>1 || Network.getInstance().enemies.size < 0) {
+		if(startRound == false || Network.getInstance().enemies.size < 0) {
 			getReadyTex.bind(0);
 			renderFlag = true;
 			
-		} else if(levelCounter>0) {
+		} else if(startRound == true && startRoundCounter>1) {
+			startRoundCounter -= delta;
 			sinkemTex.bind(0);
 			renderFlag = true;
 		}

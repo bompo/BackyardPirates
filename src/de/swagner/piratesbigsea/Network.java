@@ -36,12 +36,13 @@ public class Network {
 	
 	private Network() {
 		json = new Json();
-		connectToServer();		 
+		connectToServer();
 	}
 	
 	private void connectToServer() {
 		
 		try {
+			//socket = new SocketIO("http://localhost:17790");
 			socket = new SocketIO("http://backyardpirates.nodester.com:80");
 			
 			socket.connect(new IOCallback() {
@@ -105,8 +106,8 @@ public class Network {
 		                			remove = enemie;
 		                		}
 		                	}
-		                	enemies.removeValue(remove, true);
-		                	System.out.println("Player " + obj.getString("player") + ", " + obj.getInt("count") + " disconnected");
+		                	remove.life = -1;
+		                	System.out.println("Player " + obj.getString("player") + " disconnected");
 		                }
 		                
 		                if (event.equals("update")) {
@@ -146,11 +147,16 @@ public class Network {
 		                		if(ship.id.equalsIgnoreCase(obj.getString("player"))) {
 		                			System.out.println("synchronize " + ship.id);	
 		                			Vector2 networkPos = new Vector2((float) obj.getJSONObject("message").getDouble("positionx"),(float) obj.getJSONObject("message").getDouble("positiony"));
-		                			networkPos.sub(ship.body.getPosition());
-		                			Vector2 newPos = ship.body.getPosition().tmp().add(networkPos.mul(0.1f));
+		                			if(networkPos.dst(ship.body.getPosition())>1) {		                				
+		                				ship.body.setTransform(networkPos.x,networkPos.y, (float)obj.getJSONObject("message").getDouble("angle"));
+		                			} else {
+			                			networkPos.sub(ship.body.getPosition());
+			                			Vector2 newPos = ship.body.getPosition().tmp().add(networkPos.mul(0.1f));
+			                			ship.body.setTransform(newPos.x,newPos.y, (float)obj.getJSONObject("message").getDouble("angle"));
+		                			}
 		                			
 		                		
-		                			ship.body.setTransform(newPos.x,newPos.y, (float)obj.getJSONObject("message").getDouble("angle"));
+		                			
 		                			
 		                			if(obj.getJSONObject("message").getString("state").equalsIgnoreCase("IDLE")) {
 		                				ship.state = NetworkShip.STATE.IDLE;
@@ -199,6 +205,11 @@ public class Network {
 		                			}
 		                		}
 		                	}
+		                }
+		                
+		                if (event.equals("startround")) {
+		                	System.out.println("startround");
+		                	gameSession.startNewRound();
 		                }
 		            } catch (Exception ex) {
 		                ex.printStackTrace();
@@ -257,6 +268,20 @@ public class Network {
 		
 		socket.emit("synchronize", json);
 		currentState = player.state;				
+	}
+	
+	public void sendReady(Player player) {
+		System.out.println("send ready");
+		
+		JSONObject json = new JSONObject();
+        try {
+			json.putOpt("state", player.state);
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		socket.emit("ready", json);			
 	}
 	
 	public void sendHit(Player player) {
