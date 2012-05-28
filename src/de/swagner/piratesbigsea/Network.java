@@ -24,6 +24,11 @@ public class Network {
 	
 	public MultiPlayerScreen gameSession;
 
+	public Array<String> messageList = new Array<String>();
+	
+	public boolean connected = false;
+	public float timeToConnect = 5;
+
 	//network vars
 	public Integer place;
 	public String id;
@@ -42,10 +47,12 @@ public class Network {
 	private void connectToServer() {
 		
 		try {
-			//socket = new SocketIO("http://localhost:17790");
-			socket = new SocketIO("http://backyardpirates.nodester.com:80");
-			
+			socket = new SocketIO("http://localhost:17790");
+//			socket = new SocketIO("http://backyardpirates.nodester.com:80");
+
 			socket.connect(new IOCallback() {
+				
+				
 		        @Override
 		        public void onMessage(JSONObject json, IOAcknowledge ack) {
 		            try {
@@ -72,31 +79,58 @@ public class Network {
 
 		        @Override
 		        public void onDisconnect() {
-		            System.out.println("Connection terminated.");
+		        	addMessage("connection terminated");
+		            System.out.println("connection terminated.");
 		        }
 
 		        @Override
 		        public void onConnect() {
+		        	connected = true;
+		        	addMessage("connected");
 		            System.out.println("Connection established");
 		        }
 
 		        @Override
 		        public void on(String event, IOAcknowledge ack, Object... data) {
 		        	System.out.println("Server triggered event '" + event + "'");
-		        	
-		        	
+		        			        	
 		            try {
-
 			        	JSONObject obj  = (JSONObject) data[0];
 			        	
 		                if (event.equals("init")) {
 		                	id = obj.getString("player");
 		                	place = obj.getInt("count"); 
+		                	addMessage("joined room " + obj.getString("room") + " as player " +  + obj.getInt("count"));
 		                	System.out.println(obj.getString("player") + ", " + obj.getInt("count"));
 		                }
 		                if (event.equals("connect")) {
 		                	connectedIDs.put(obj.getString("player"), obj.getInt("count"));
 		                	System.out.println("Player " + obj.getString("player") + ", " + obj.getInt("count") + " connected");
+
+				        	addMessage("player " + obj.getString("player") + ", " + obj.getInt("count") + " connected");
+				        	if(connectedIDs.keySet().size() == 1) {
+				        		System.out.println("reinit");
+				        		if(gameSession!=null) {
+					        		gameSession.waitingForOtherPlayers = false;
+					        		gameSession.winLoseCounter = 0;
+					        		gameSession.initLevel();
+				        		}
+				        	}
+		                }
+		                if (event.equals("ready")) {
+		                	System.out.println("Player " + obj.getString("player") + " ready");
+
+				        	addMessage("player " + obj.getString("player") + " ready");
+		                }
+		                if (event.equals("notready")) {
+		                	System.out.println("Player " + obj.getString("player") + " not ready");
+
+				        	addMessage("player " + obj.getString("player") + " not ready");
+		                }
+		                if (event.equals("death")) {
+		                	System.out.println("Player " + obj.getString("player") + " death");
+
+				        	addMessage("player " + obj.getString("player") + " death");
 		                }
 		                if (event.equals("disconnect")) {
 		                	connectedIDs.remove(obj.getString("player"));
@@ -108,6 +142,13 @@ public class Network {
 		                	}
 		                	remove.life = -1;
 		                	System.out.println("Player " + obj.getString("player") + " disconnected");
+		                	addMessage("player " + obj.getString("player") + " disconnected");
+		                	
+		                	if(connectedIDs.keySet().size() == 0) {
+				        		gameSession.waitingForOtherPlayers = true;
+				        		gameSession.winLoseCounter = 0;
+				        		gameSession.initLevel();
+				        	}
 		                }
 		                
 		                if (event.equals("update")) {
@@ -153,10 +194,7 @@ public class Network {
 			                			networkPos.sub(ship.body.getPosition());
 			                			Vector2 newPos = ship.body.getPosition().tmp().add(networkPos.mul(0.1f));
 			                			ship.body.setTransform(newPos.x,newPos.y, (float)obj.getJSONObject("message").getDouble("angle"));
-		                			}
-		                			
-		                		
-		                			
+		                			}	
 		                			
 		                			if(obj.getJSONObject("message").getString("state").equalsIgnoreCase("IDLE")) {
 		                				ship.state = NetworkShip.STATE.IDLE;
@@ -177,6 +215,7 @@ public class Network {
 		                
 		                if (event.equals("hit")) {
 		                	System.out.println("hit");
+		                	addMessage("player " + obj.getString("player") + " hit");
 		                	for(NetworkShip ship:enemies) {
 		                		if(ship.id.equalsIgnoreCase(obj.getString("player"))) {
 		                			System.out.println("hit " + ship.id);	
@@ -261,6 +300,7 @@ public class Network {
 			json.putOpt("positionx", player.body.getPosition().x);
 			json.putOpt("positiony", player.body.getPosition().y);
 			json.putOpt("angle", player.body.getAngle());
+			json.putOpt("angledir", player.body.getAngularVelocity());
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -275,13 +315,27 @@ public class Network {
 		
 		JSONObject json = new JSONObject();
         try {
-			json.putOpt("state", player.state);
+			json.putOpt("player", id);
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
 		socket.emit("ready", json);			
+	}
+	
+	public void sendNotReady(Player player) {
+		System.out.println("send not ready");
+		
+		JSONObject json = new JSONObject();
+        try {
+			json.putOpt("player", id);
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		socket.emit("notready", json);			
 	}
 	
 	public void sendHit(Player player) {
@@ -293,6 +347,7 @@ public class Network {
 			json.putOpt("positionx", player.body.getPosition().x);
 			json.putOpt("positiony", player.body.getPosition().y);
 			json.putOpt("angle", player.body.getAngle());
+			json.putOpt("angledir", player.body.getAngularVelocity());
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -305,6 +360,13 @@ public class Network {
 		if(instance!=null) return instance;
 		instance = new Network();		
 		return instance;
+	}
+	
+	public void addMessage(String m) {
+		if(messageList.size>5) {
+			messageList.removeIndex(0);
+		}
+		messageList.add(m);		
 	}
 
 	public void setGameSession(MultiPlayerScreen multiPlayerScreen) {

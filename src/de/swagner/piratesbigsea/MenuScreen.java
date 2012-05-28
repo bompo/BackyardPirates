@@ -107,6 +107,7 @@ public class MenuScreen extends DefaultScreen implements InputProcessor {
 		Gdx.input.setInputProcessor(this);
 		
 		network = Network.getInstance();
+		network.addMessage("connect to server...");
 		
 		background = Gdx.audio.newMusic(Gdx.files.internal("data/menu.mp3"));
 		if(Configuration.getInstance().sound) {
@@ -182,8 +183,7 @@ public class MenuScreen extends DefaultScreen implements InputProcessor {
 		bloom.setClearColor(Resources.getInstance().clearColor[0],
 				Resources.getInstance().clearColor[1],
 				Resources.getInstance().clearColor[2],
-				Resources.getInstance().clearColor[3]);
-		
+				Resources.getInstance().clearColor[3]);	
 	}
 	
 	private void createPhysicsWorld() {
@@ -318,7 +318,12 @@ public class MenuScreen extends DefaultScreen implements InputProcessor {
 		
 		batch.begin();
 		font.drawMultiLine(batch, "Controls\nWASD/Directional Keys: Move\nCRTL: Fire Right\nSHIFT/SPACE: Fire Left\nF: Fullscreen\nB: Bloom\nG: Sound", 40, 150);
-		font.drawMultiLine(batch, "a game for LD23\nby @twbompo", 650, 60);
+		font.drawMultiLine(batch, "\nby @twbompo", 650, 60);
+		int textPos = 420;
+		for(String m:network.messageList) {
+			font.drawMultiLine(batch, m, 650, textPos);
+			textPos -=18;
+		}
 		batch.end();
 
 		// FadeInOut
@@ -595,13 +600,19 @@ public class MenuScreen extends DefaultScreen implements InputProcessor {
 
 	@Override
 	public boolean keyDown(int keycode) {
-		if (Gdx.input.isTouched())
-			finished = true;
+		if (Gdx.input.isTouched()) {
+			if(network.connected) {
+				finished = true;
+			}
+		}
+			
 		if (keycode == Input.Keys.ESCAPE || keycode == Input.Keys.BACK) {
 			Gdx.app.exit();
 		}
 		if (keycode == Input.Keys.ENTER || keycode == Input.Keys.SPACE) {	
-			finished = true;
+			if(network.connected) {
+				finished = true;
+			}
 		}
 		
 		if (keycode == Input.Keys.F) {			
@@ -653,7 +664,9 @@ public class MenuScreen extends DefaultScreen implements InputProcessor {
 	@Override
 	public boolean touchDown(int x, int y, int pointer, int button) {
 		// TODO Auto-generated method stub
-		finished = true;
+		if(network.connected) {
+			finished = true;
+		}
 		return false;
 	}
 

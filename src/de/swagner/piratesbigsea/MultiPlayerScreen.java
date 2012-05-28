@@ -67,6 +67,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 	Texture sinkemTex;
 	Texture winTex;
 	Texture loseTex;
+	Texture waitingTex;
 	
 	Texture blackTex;
 	
@@ -97,9 +98,11 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 
 	float fade = 1.0f;
 	boolean finished = false;
-	
+
+	float levelCounter = 3;
 	boolean win = false;
 	boolean lose = false;
+	boolean waitingForOtherPlayers = true;
 
 	float delta;
 	float scale, rotate = 0;
@@ -109,6 +112,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 	
 	float syncCounter = 1;
 	boolean startRound = false;
+	boolean ready = false;
 	float startRoundCounter = 1;
 	
 	// GLES20
@@ -184,6 +188,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		sinkemTex  = new Texture(Gdx.files.internal("data/sinkem.png"), true);
 		winTex  = new Texture(Gdx.files.internal("data/win.png"), true);
 		loseTex  = new Texture(Gdx.files.internal("data/lose.png"), true);
+		waitingTex  = new Texture(Gdx.files.internal("data/waiting.png"), true);
 		
 		batch = new SpriteBatch();
 		batch.getProjectionMatrix().setToOrtho2D(0, 0, 800, 480);
@@ -227,9 +232,13 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 				Resources.getInstance().clearColor[2],
 				Resources.getInstance().clearColor[3]);
 		
-
+		if(Network.getInstance().connectedIDs.keySet().size() == 0) {
+			Network.getInstance().addMessage("waiting for other players...");
+			waitingForOtherPlayers = true;
+		} else {
+			waitingForOtherPlayers = false;
+		}
 		initLevel();
-		Network.getInstance().sendReady(player);
 		
 	}
 	
@@ -469,7 +478,12 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		Gdx.gl.glCullFace(GL20.GL_BACK);
 	}
 
-	private void initLevel() {
+	public void initLevel() {
+		System.out.println("REINIT");
+		Network.getInstance().sendNotReady(player);
+		startRound = false;
+		ready = false;
+		
 		winLoseCounter -= delta;
 		
 		if(Network.getInstance().connectedIDs.keySet().size() == 0) {
@@ -480,6 +494,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		}
 		
 		if(winLoseCounter<0) {
+			levelCounter = 3;
 			
 			//cleanup
 			boolean found = false;
@@ -503,6 +518,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 			}
 				
 			// add Ships for connected Players
+			System.out.println("add enemy");
 			for(String id:Network.getInstance().connectedIDs.keySet()) {
 				if(Network.getInstance().connectedIDs.get(id) == 0) {
 					Network.getInstance().enemies.add(new NetworkShip(id,Network.getInstance().connectedIDs.get(id),world,5,5,0));
@@ -516,10 +532,6 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		}
 	}
 
-	private void reset() {
-		initLevel();
-	}
-	
 	public void startNewRound() {
 		startRound = true;
 		startRoundCounter = 1;
@@ -547,12 +559,20 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		scale += (MathUtils.sin(startTime) * delta) / 20.f;
 		rotate += (MathUtils.cos(startTime) * delta) / 10.f;
 
-		if(startRound) {
+		if((levelCounter<0 && startRound) || waitingForOtherPlayers) {
 			processInput();
-			doPhysics();
-			updateAI();
-		}
-		
+		} else {
+			levelCounter -= delta;
+			if(levelCounter <0) {
+				if(ready == false) {
+					Network.getInstance().sendReady(player);
+					ready =true;
+				}				
+			}
+		}		
+
+		doPhysics();
+		updateAI();		
 		cam.update();
 
 		if(Configuration.getInstance().bloom) {
@@ -567,25 +587,29 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		Gdx.gl.glEnable(GL10.GL_DEPTH_TEST);
 		Gdx.gl.glDepthMask(true);
 		
-
-	
-		boolean renderFlag = false;
-		if(startRound == false || Network.getInstance().enemies.size < 0) {
-			getReadyTex.bind(0);
-			renderFlag = true;
-			
-		} else if(startRound == true && startRoundCounter>1) {
-			startRoundCounter -= delta;
-			sinkemTex.bind(0);
-			renderFlag = true;
-		}
 		
-		if(win) {
-			winTex.bind(0);
-			renderFlag = true;
-		}
-		if(lose) {
-			loseTex.bind(0);
+		boolean renderFlag = false;
+		if(!waitingForOtherPlayers) {
+			if(startRound == false || Network.getInstance().enemies.size < 0) {
+				getReadyTex.bind(0);
+				renderFlag = true;
+				
+			} else if(startRound == true && startRoundCounter>0) {
+				startRoundCounter -= delta;
+				sinkemTex.bind(0);
+				renderFlag = true;
+			}
+			
+			if(win) {
+				winTex.bind(0);
+				renderFlag = true;
+			}
+			if(lose) {
+				loseTex.bind(0);
+				renderFlag = true;
+			}
+		} else {
+			waitingTex.bind(0);
 			renderFlag = true;
 		}
 		
@@ -617,6 +641,14 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 			modelPlaneRealObj.render(flagShaderFog);
 			flagShaderFog.end();
 		}
+		
+		batch.begin();
+		int textPos = 420;
+		for(String m:Network.getInstance().messageList) {
+			font.drawMultiLine(batch, m, 50, textPos);
+			textPos -=18;
+		}
+		batch.end();
 
 		// FadeInOut
 		if (!finished && fade > 0) {
@@ -688,16 +720,18 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 			}
 		}
 		
-		//WIN LOSE?
-		if(player.life<=0) {
-			lose = true;
-			win = false;
-			initLevel();
-		}
-		if(Network.getInstance().enemies.size<=0) {
-			win = true;
-			lose = false;
-			initLevel();
+		if(!waitingForOtherPlayers) {
+			//WIN LOSE?
+			if(player.life<=0) {
+				lose = true;
+				win = false;
+				initLevel();
+			}
+			if(Network.getInstance().enemies.size<=0) {
+				win = true;
+				lose = false;
+				initLevel();
+			}
 		}
 	}
 
@@ -1033,15 +1067,16 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		//sync client with network
 		syncCounter = syncCounter - delta;
 		if(syncCounter < 0) {
-			Network.getInstance().sendSyncState(player);
+			if(!waitingForOtherPlayers) {
+				Network.getInstance().sendSyncState(player);
+			}
 			syncCounter = 1;
 		}
 
 	}
 
 	private void doPhysics() {		
-		world.step(Gdx.graphics.getDeltaTime(), 6, 2);
-		
+		world.step(Gdx.graphics.getDeltaTime(), 6, 2);		
 	
 			List<Contact> contactList = world.getContactList();
 			for (int i = 0; i < contactList.size(); i++) {
@@ -1096,9 +1131,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 						}
 					}
 				}
-			}
-
-		
+			}		
 	}
 	
 	public boolean shoot(final Vector2 position, final Vector2 velocity) {
