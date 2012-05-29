@@ -107,7 +107,6 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 	float delta;
 	float scale, rotate = 0;
 
-	int currentLevel = 1;
 	float winLoseCounter = -1;
 	
 	float syncCounter = 1;
@@ -484,52 +483,41 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		startRound = false;
 		ready = false;
 		
-		winLoseCounter -= delta;
+		levelCounter = 3;
 		
-		if(Network.getInstance().connectedIDs.keySet().size() == 0) {
-			win = false;
-			lose = false;
-			winLoseCounter = 5;
-			return;
-		}
-		
-		if(winLoseCounter<0) {
-			levelCounter = 3;
-			
-			//cleanup
-			boolean found = false;
-			do {
-				found = false;
-				for (int e = 0; e < Network.getInstance().enemies.size; e++) {
-					world.destroyBody(Network.getInstance().enemies.get(e).body);
-					Network.getInstance().enemies.removeIndex(e);
-					found = true;
-					break;
-				}
-			} while (found);
-			if(player.body != null) {
-				world.destroyBody(player.body);
+		//cleanup
+		boolean found = false;
+		do {
+			found = false;
+			for (int e = 0; e < Network.getInstance().enemies.size; e++) {
+				world.destroyBody(Network.getInstance().enemies.get(e).body);
+				Network.getInstance().enemies.removeIndex(e);
+				found = true;
+				break;
 			}
+		} while (found);
+		if(player.body != null) {
+			world.destroyBody(player.body);
+		}
 
-			if(Network.getInstance().place == 0) {
-				player = new Player(world,5,5,0);
-			} else if (Network.getInstance().place == 1) {
-				player = new Player(world,5,40, 180f*MathUtils.degreesToRadians);
-			}
-				
-			// add Ships for connected Players
-			System.out.println("add enemy");
-			for(String id:Network.getInstance().connectedIDs.keySet()) {
-				if(Network.getInstance().connectedIDs.get(id) == 0) {
-					Network.getInstance().enemies.add(new NetworkShip(id,Network.getInstance().connectedIDs.get(id),world,5,5,0));
-				} else if (Network.getInstance().connectedIDs.get(id) == 1) {
-					Network.getInstance().enemies.add(new NetworkShip(id,Network.getInstance().connectedIDs.get(id),world, 5, 40, 180f*MathUtils.degreesToRadians));
-				}
-			}
-			win = false;
-			lose = false;
-			winLoseCounter = 5;
+		if(Network.getInstance().place == 0) {
+			player = new Player(world,5,5,0);
+		} else if (Network.getInstance().place == 1) {
+			player = new Player(world,5,40, 180f*MathUtils.degreesToRadians);
 		}
+			
+		// add Ships for connected Players
+		System.out.println("add enemy");
+		for(String id:Network.getInstance().connectedIDs.keySet()) {
+			if(Network.getInstance().connectedIDs.get(id) == 0) {
+				Network.getInstance().enemies.add(new NetworkShip(id,Network.getInstance().connectedIDs.get(id),world,5,5,0));
+			} else if (Network.getInstance().connectedIDs.get(id) == 1) {
+				Network.getInstance().enemies.add(new NetworkShip(id,Network.getInstance().connectedIDs.get(id),world, 5, 40, 180f*MathUtils.degreesToRadians));
+			}
+		}
+		win = false;
+		lose = false;
+		winLoseCounter = 3;
 	}
 
 	public void startNewRound() {
@@ -555,6 +543,13 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		delta = Math.min(0.1f, deltaTime);
 
 		startTime += delta;
+		
+		if((win || lose) && winLoseCounter>=0) {
+			winLoseCounter -= delta;
+			if(winLoseCounter<0) {
+				initLevel();
+			}
+		}
 
 		scale += (MathUtils.sin(startTime) * delta) / 20.f;
 		rotate += (MathUtils.cos(startTime) * delta) / 10.f;
@@ -563,7 +558,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 			processInput();
 		} else {
 			levelCounter -= delta;
-			if(levelCounter <0) {
+			if(levelCounter < 0) {
 				if(ready == false) {
 					Network.getInstance().sendReady(player);
 					ready =true;
@@ -586,7 +581,6 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		Gdx.gl.glEnable(GL10.GL_BLEND);
 		Gdx.gl.glEnable(GL10.GL_DEPTH_TEST);
 		Gdx.gl.glDepthMask(true);
-		
 		
 		boolean renderFlag = false;
 		if(!waitingForOtherPlayers) {
@@ -725,12 +719,10 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 			if(player.life<=0) {
 				lose = true;
 				win = false;
-				initLevel();
 			}
 			if(Network.getInstance().enemies.size<=0) {
 				win = true;
 				lose = false;
-				initLevel();
 			}
 		}
 	}
