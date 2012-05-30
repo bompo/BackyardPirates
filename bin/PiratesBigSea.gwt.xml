@@ -3,5 +3,6 @@
 <module>
 	<source path="de/swagner/piratesbigsea">
 	<exclude name="**/DesktopStarter.java"/>
-	</source>
+	<exclude name="**/Network.java"/>
+	</source>	
 </module>

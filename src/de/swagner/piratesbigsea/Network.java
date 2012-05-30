@@ -156,7 +156,7 @@ public class Network {
 		                	for(NetworkShip ship:enemies) {
 		                		if(ship.id.equalsIgnoreCase(obj.getString("player"))) {
 		                			System.out.println("update " + ship.id);	
-		                			ship.body.setTransform((float) obj.getJSONObject("message").getDouble("positionx"),(float) obj.getJSONObject("message").getDouble("positiony"),(float)obj.getJSONObject("message").getDouble("angle"));
+		                			gameSession.networkUpdates.add(new UpdatePackage(ship, new Vector2((float) obj.getJSONObject("message").getDouble("positionx"),(float) obj.getJSONObject("message").getDouble("positiony")), (float)obj.getJSONObject("message").getDouble("angle")));
 		                			
 		                			if(obj.getJSONObject("message").getString("state").equalsIgnoreCase("IDLE")) {
 		                				ship.state = NetworkShip.STATE.IDLE;
@@ -174,10 +174,10 @@ public class Network {
 		                			
 		                			if(obj.getJSONObject("message").getInt("fire") == 1) {		                				
 	                					gameSession.shootEnemy(ship.body.getWorldCenter().add(ship.body.getWorldVector(new Vector2(3f,1f))), ship.body.getWorldVector(new Vector2(0,1f)).rotate(-90).cpy());
-	                					ship.hitAnimation = 4;		                				
+	                					ship.hitAnimation = -4;		                				
 		                			} else if(obj.getJSONObject("message").getInt("fire") == -1) {
 		                				gameSession.shootEnemy(ship.body.getWorldCenter().add(ship.body.getWorldVector(new Vector2(-3f,1f))), ship.body.getWorldVector(new Vector2(0,1f)).rotate(90).cpy());
-		                				ship.hitAnimation = -4;
+		                				ship.hitAnimation = 4;
 		                			}
 		                		}
 		                	}
@@ -189,11 +189,11 @@ public class Network {
 		                			System.out.println("synchronize " + ship.id);	
 		                			Vector2 networkPos = new Vector2((float) obj.getJSONObject("message").getDouble("positionx"),(float) obj.getJSONObject("message").getDouble("positiony"));
 		                			if(networkPos.dst(ship.body.getPosition())>1) {		                				
-		                				ship.body.setTransform(networkPos.x,networkPos.y, (float)obj.getJSONObject("message").getDouble("angle"));
+		                				gameSession.networkUpdates.add(new UpdatePackage(ship, networkPos, (float)obj.getJSONObject("message").getDouble("angle")));
 		                			} else {
 			                			networkPos.sub(ship.body.getPosition());
 			                			Vector2 newPos = ship.body.getPosition().tmp().add(networkPos.mul(0.1f));
-			                			ship.body.setTransform(newPos.x,newPos.y, (float)obj.getJSONObject("message").getDouble("angle"));
+			                			gameSession.networkUpdates.add(new UpdatePackage(ship, newPos, (float)obj.getJSONObject("message").getDouble("angle")));
 		                			}	
 		                			
 		                			if(obj.getJSONObject("message").getString("state").equalsIgnoreCase("IDLE")) {
@@ -226,8 +226,7 @@ public class Network {
 		                			networkPos.sub(ship.body.getPosition());
 		                			Vector2 newPos = ship.body.getPosition().tmp().add(networkPos.mul(0.1f));
 		                			
-		                		
-		                			ship.body.setTransform(newPos.x,newPos.y, (float)obj.getJSONObject("message").getDouble("angle"));
+		                			gameSession.networkUpdates.add(new UpdatePackage(ship, newPos, (float)obj.getJSONObject("message").getDouble("angle")));
 		                			
 		                			if(obj.getJSONObject("message").getString("state").equalsIgnoreCase("IDLE")) {
 		                				ship.state = NetworkShip.STATE.IDLE;

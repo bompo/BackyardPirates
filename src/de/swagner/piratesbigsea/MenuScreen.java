@@ -99,14 +99,14 @@ public class MenuScreen extends DefaultScreen implements InputProcessor {
 	Array<Float> waterAngleX = new Array<Float>();
 	Array<Float> waterAngleY = new Array<Float>();
 	
-	private Network network;
+	private NetworkSocketIO network;
 
 	public MenuScreen(Game game) {
 		super(game);
 		Gdx.input.setCatchBackKey(true);
 		Gdx.input.setInputProcessor(this);
 		
-		network = Network.getInstance();
+		network = NetworkSocketIO.getInstance();
 		network.addMessage("connect to server...");
 		
 		background = Gdx.audio.newMusic(Gdx.files.internal("data/menu.mp3"));
