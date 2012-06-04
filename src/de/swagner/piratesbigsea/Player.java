@@ -43,7 +43,6 @@ public class Player {
 		
 		body.setUserData(this);
 		
-
 		// we are done, all that's left is disposing the boxPoly
 		boxPoly.dispose();
 	}

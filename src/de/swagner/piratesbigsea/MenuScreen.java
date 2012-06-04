@@ -107,6 +107,7 @@ public class MenuScreen extends DefaultScreen implements InputProcessor {
 		Gdx.input.setInputProcessor(this);
 		
 		network = NetworkSocketIO.getInstance();
+		network.connect();
 		network.addMessage("connect to server...");
 		
 		background = Gdx.audio.newMusic(Gdx.files.internal("data/menu.mp3"));
@@ -456,15 +457,11 @@ public class MenuScreen extends DefaultScreen implements InputProcessor {
 		tmp.idt();
 		model.idt();
 
-
 		tmp.setToScaling(0.2f,0.2f,0.2f);
 		model.mul(tmp);
 		
 		tmp.setToRotation(Vector3.X, 90);
-		model.mul(tmp);
-		
-
-		
+		model.mul(tmp);	
 		
 		Vector2 position = player.body.getPosition();
 		tmp.setToTranslation(-position.x+10, -position.y+10, -1f);

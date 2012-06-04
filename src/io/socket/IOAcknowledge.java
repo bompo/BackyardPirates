@@ -8,7 +8,8 @@
  */
 package io.socket;
 
-import org.json.JSONArray;
+import com.google.gwt.json.client.JSONArray;
+
 
 /**
  * The Interface IOAcknowledge.

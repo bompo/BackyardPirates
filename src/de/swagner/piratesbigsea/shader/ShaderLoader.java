@@ -16,8 +16,8 @@ public final class ShaderLoader {
 		if (!shader.isCompiled()) {
 			System.out.println(shader.getLog());
 			Gdx.app.exit();
-		} else
-			Gdx.app.log("shader compiled", shader.getLog());
+		} 
+//			Gdx.app.log("shader compiled", shader.getLog());
 		return shader;
 	}
 }

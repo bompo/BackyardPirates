@@ -133,17 +133,25 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 	
 //	Box2DDebugRenderer debugRenderer;
 
+	private NetworkSocketIO network;
+	private Configuration configuration;
+
 
 	public MultiPlayerScreen(Game game) {
 		super(game);
 		
-		NetworkSocketIO.getInstance().setGameSession(this);
+		configuration = Configuration.getInstance();
+		
+		network = NetworkSocketIO.getInstance();
+		
+		network.setGameSession(this);
+		network.connect();
 		
 		Gdx.input.setCatchBackKey(true);
 		Gdx.input.setInputProcessor(this);
 		
 		background = Gdx.audio.newMusic(Gdx.files.internal("data/wind.ogg"));
-		if(Configuration.getInstance().sound) {
+		if(configuration.sound) {
 			background.setLooping(true);
 			background.play();
 		}
@@ -233,12 +241,13 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 				Resources.getInstance().clearColor[2],
 				Resources.getInstance().clearColor[3]);
 		
-		if(NetworkSocketIO.getInstance().connectedIDs.keySet().size() == 0) {
-			NetworkSocketIO.getInstance().addMessage("waiting for other players...");
+		if(network.connectedIDs.keySet().size() == 0) {
+			network.addMessage("waiting for other players...");
 			waitingForOtherPlayers = true;
 		} else {
 			waitingForOtherPlayers = false;
 		}
+		
 		initLevel();
 		
 	}
@@ -270,6 +279,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 			groundBody.createFixture(fixtureDef);
 			groundPoly.dispose();
 		}
+		
 		{
 			PolygonShape groundPoly = new PolygonShape();
 			Vector2[] vertices = new Vector2[4];	
@@ -430,12 +440,6 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 			groundBody.createFixture(fixtureDef);
 			groundPoly.dispose();
 		}
-
-		if(NetworkSocketIO.getInstance().place == 0) {
-			player = new Player(world,5,5,0);
-		} else if (NetworkSocketIO.getInstance().place == 1) {
-			player = new Player(world,5,40,180*MathUtils.degreesToRadians);
-		}
 		
 	}
 	
@@ -480,46 +484,45 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 	}
 
 	public void initLevel() {
-		System.out.println("REINIT");
-		NetworkSocketIO.getInstance().sendNotReady(player);
+		network.addMessage("reinit");
 		startRound = false;
 		ready = false;
 		
 		levelCounter = 3;
 		
 		//cleanup
-		boolean found = false;
-		do {
-			found = false;
-			for (int e = 0; e < NetworkSocketIO.getInstance().enemies.size; e++) {
-				world.destroyBody(NetworkSocketIO.getInstance().enemies.get(e).body);
-				NetworkSocketIO.getInstance().enemies.removeIndex(e);
-				found = true;
-				break;
-			}
-		} while (found);
-		if(player.body != null) {
+		while (network.enemies.size>0) {
+			world.destroyBody(network.enemies.get(0).body);
+			network.enemies.removeIndex(0);		
+		}
+		if (player != null && player.body != null) {
 			world.destroyBody(player.body);
 		}
-
-		if(NetworkSocketIO.getInstance().place == 0) {
-			player = new Player(world,5,5,0);
-		} else if (NetworkSocketIO.getInstance().place == 1) {
-			player = new Player(world,5,40, 180f*MathUtils.degreesToRadians);
+		
+		network.addMessage("network.place " + network.place + "   " +  (network.place == 0));
+		if (network.place == 0) {
+			player = new Player(world, 5, 5, 0);
+		} else {
+			player = new Player(world, 5, 40, 180f * MathUtils.degreesToRadians);
 		}
 			
 		// add Ships for connected Players
 		System.out.println("add enemy");
-		for(String id:NetworkSocketIO.getInstance().connectedIDs.keySet()) {
-			if(NetworkSocketIO.getInstance().connectedIDs.get(id) == 0) {
-				NetworkSocketIO.getInstance().enemies.add(new NetworkShip(id,NetworkSocketIO.getInstance().connectedIDs.get(id),world,5,5,0));
-			} else if (NetworkSocketIO.getInstance().connectedIDs.get(id) == 1) {
-				NetworkSocketIO.getInstance().enemies.add(new NetworkShip(id,NetworkSocketIO.getInstance().connectedIDs.get(id),world, 5, 40, 180f*MathUtils.degreesToRadians));
+		for(String id:network.connectedIDs.keySet()) {
+			if(network.connectedIDs.get(id) == 0) {
+				network.enemies.add(new NetworkShip(id,network.connectedIDs.get(id),world,5,5,0));
+			} else if (network.connectedIDs.get(id) == 1) {
+				network.enemies.add(new NetworkShip(id,network.connectedIDs.get(id),world, 5, 40, 180f*MathUtils.degreesToRadians));
 			}
 		}
 		win = false;
 		lose = false;
 		winLoseCounter = 3;
+		
+		
+		network.addMessage("eneimeis: " + network.enemies.size);
+
+		network.sendNotReady();
 	}
 
 	public void startNewRound() {
@@ -562,7 +565,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 			levelCounter -= delta;
 			if(levelCounter < 0) {
 				if(ready == false) {
-					NetworkSocketIO.getInstance().sendReady(player);
+					network.sendReady(player);
 					ready =true;
 				}				
 			}
@@ -572,7 +575,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		updateAI();		
 		cam.update();
 
-		if(Configuration.getInstance().bloom) {
+		if(configuration.bloom) {
 			bloom.capture();
 			renderScene();				
 			bloom.render();
@@ -586,7 +589,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		
 		boolean renderFlag = false;
 		if(!waitingForOtherPlayers) {
-			if(startRound == false || NetworkSocketIO.getInstance().enemies.size < 0) {
+			if(startRound == false || network.enemies.size < 0) {
 				getReadyTex.bind(0);
 				renderFlag = true;
 				
@@ -640,7 +643,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		
 		batch.begin();
 		int textPos = 420;
-		for(String m:NetworkSocketIO.getInstance().messageList) {
+		for(String m:network.messageList) {
 			font.drawMultiLine(batch, m, 50, textPos);
 			textPos -=18;
 		}
@@ -681,7 +684,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 			ball.update(delta);
 		}
 		
-		for(NetworkShip ball:NetworkSocketIO.getInstance().enemies) {
+		for(NetworkShip ball:network.enemies) {
 			ball.update(delta);
 		}
 		
@@ -706,12 +709,12 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 			deadEnemies.removeIndex(0);				
 		}		
 		
-		for (int e = 0; e < NetworkSocketIO.getInstance().enemies.size; e++) {
-			if (NetworkSocketIO.getInstance().enemies.get(e).life <= 0 && NetworkSocketIO.getInstance().enemies.get(e).body.getLinearVelocity().len2()<5) {
-				deadEnemies.add(new DeadEnemyShip(new Vector3(NetworkSocketIO.getInstance().enemies.get(e).body.getWorldCenter().x,NetworkSocketIO.getInstance().enemies.get(e).body.getWorldCenter().y,0), NetworkSocketIO.getInstance().enemies.get(e).body.getAngle()));
+		for (int e = 0; e < network.enemies.size; e++) {
+			if (network.enemies.get(e).life <= 0 && network.enemies.get(e).body.getLinearVelocity().len2()<5) {
+				deadEnemies.add(new DeadEnemyShip(new Vector3(network.enemies.get(e).body.getWorldCenter().x,network.enemies.get(e).body.getWorldCenter().y,0), network.enemies.get(e).body.getAngle()));
 				
-				world.destroyBody(NetworkSocketIO.getInstance().enemies.get(e).body);
-				NetworkSocketIO.getInstance().enemies.removeIndex(e);
+				world.destroyBody(network.enemies.get(e).body);
+				network.enemies.removeIndex(e);
 				
 			}
 		}
@@ -723,7 +726,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 				win = false;
 				startRound = false;
 			}
-			if(NetworkSocketIO.getInstance().enemies.size<=0) {
+			if(network.enemies.size<=0) {
 				win = true;
 				lose = false;
 				startRound = false;
@@ -732,6 +735,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		
 		//updates from network
 		for (int e = 0; e < networkUpdates.size; e++) {
+			network.addMessage("apply ship " + networkUpdates.get(e).ship.id + " pos " + networkUpdates.get(e).pos.toString());
 			networkUpdates.get(e).apply();
 		}
 		networkUpdates.clear();
@@ -828,9 +832,9 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		boatTex.bind(0);
 		
 		//render enemies
-		for (int i = 0; i < NetworkSocketIO.getInstance().enemies.size; i++) {
+		for (int i = 0; i < network.enemies.size; i++) {
 			
-			NetworkShip box = NetworkSocketIO.getInstance().enemies.get(i);
+			NetworkShip box = network.enemies.get(i);
 			
 			tmp.idt();
 			model.idt();
@@ -1047,13 +1051,13 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 			}
 		}
 
-		NetworkSocketIO.getInstance().sendCurrentState(player, 0);
+		network.sendCurrentState(player, 0);
 		
 		if (Gdx.input.isKeyPressed(Keys.SPACE) || Gdx.input.isKeyPressed(Keys.X) || Gdx.input.isKeyPressed(Keys.E) || Gdx.input.isKeyPressed(Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Keys.SHIFT_RIGHT)) {
 			boolean shooted = shoot(player.body.getWorldCenter().add(player.body.getWorldVector(new Vector2(-3f,1f))), player.body.getWorldVector(new Vector2(0,1f)).rotate(90).cpy());
 			if(shooted) {
-				player.hitAnimation = 4;
-				NetworkSocketIO.getInstance().sendCurrentState(player, -1);
+				player.hitAnimation = -4;
+				network.sendCurrentState(player, -1);
 			}
 			
 		}
@@ -1061,8 +1065,8 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		if (Gdx.input.isKeyPressed(Keys.Z) || Gdx.input.isKeyPressed(Keys.Y) || Gdx.input.isKeyPressed(Keys.Q)  || Gdx.input.isKeyPressed(Keys.CONTROL_RIGHT) || Gdx.input.isKeyPressed(Keys.CONTROL_LEFT)) {
 			boolean shooted = shoot(player.body.getWorldCenter().add(player.body.getWorldVector(new Vector2(3f,1f))), player.body.getWorldVector(new Vector2(0,1f)).rotate(-90).cpy());
 			if(shooted) {
-				player.hitAnimation = -4;
-				NetworkSocketIO.getInstance().sendCurrentState(player, 1);
+				player.hitAnimation = 4;
+				network.sendCurrentState(player, 1);
 			}
 		}
 		
@@ -1070,7 +1074,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		syncCounter = syncCounter - delta;
 		if(syncCounter < 0) {
 			if(!waitingForOtherPlayers) {
-				NetworkSocketIO.getInstance().sendSyncState(player);
+				network.sendSyncState(player);
 			}
 			syncCounter = 1;
 		}
@@ -1092,7 +1096,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 							// TODO send enemy hit packet
 //							((EnemyShip) b).life -= 1;
 							((CannonBall) a).life = 10;
-							if(Configuration.getInstance().sound) {
+							if(configuration.sound) {
 								hit.play();
 							}
 						}
@@ -1103,7 +1107,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 							// TODO send enemy hit packet
 //							((EnemyShip) a).life -= 1;
 							((CannonBall) b).life = 10;
-							if(Configuration.getInstance().sound) {
+							if(configuration.sound) {
 								hit.play();
 							}
 						}
@@ -1113,9 +1117,9 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 						if(((CannonBall) a).life < 10 && ((CannonBall) a).friendly == false) {
 							// TODO send player hit packet
 							((Player) b).life -= 1;
-							NetworkSocketIO.getInstance().sendHit(player);
+							network.sendHit(player);
 							((CannonBall) a).life = 10;
-							if(Configuration.getInstance().sound) {
+							if(configuration.sound) {
 								hit.play();
 							}
 						}
@@ -1125,9 +1129,9 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 						if(((CannonBall) b).life < 10 && ((CannonBall) b).friendly == false) {
 							// TODO send player hit packet
 							((Player) a).life -= 1;
-							NetworkSocketIO.getInstance().sendHit(player);
+							network.sendHit(player);
 							((CannonBall) b).life = 10;
-							if(Configuration.getInstance().sound) {
+							if(configuration.sound) {
 								hit.play();
 							}
 						}
@@ -1154,7 +1158,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 		
 		player.lastShot = 0;
 		
-		if(Configuration.getInstance().sound) {
+		if(configuration.sound) {
 			shoot.play();
 		}
 		
@@ -1172,7 +1176,7 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 			bullets.add(new CannonBall(box, false));
 			box.setUserData(bullets.get(bullets.size-1));
 		}
-		if(Configuration.getInstance().sound) {
+		if(configuration.sound) {
 			shoot.play();
 		}
 		
@@ -1204,18 +1208,18 @@ public class MultiPlayerScreen extends DefaultScreen implements InputProcessor {
 			if(Gdx.app.getType() == ApplicationType.Desktop) {
 				if(!Gdx.graphics.isFullscreen()) {
 					Gdx.graphics.setDisplayMode(Gdx.graphics.getDesktopDisplayMode().width, Gdx.graphics.getDesktopDisplayMode().height, true);
-					Configuration.getInstance().setFullscreen(true);
+					configuration.setFullscreen(true);
 				} else {
 					Gdx.graphics.setDisplayMode(800,480, false);		
-					Configuration.getInstance().setFullscreen(false);
+					configuration.setFullscreen(false);
 				}				
 			}			
 		}
 		if (keycode == Input.Keys.B) {			
-			Configuration.getInstance().setBloom(!Configuration.getInstance().bloom);			
+			configuration.setBloom(!configuration.bloom);			
 		}
 		if (keycode == Input.Keys.G) {			
-			Configuration.getInstance().setSound(!Configuration.getInstance().sound);			
+			configuration.setSound(!configuration.sound);			
 		}		
 		
 		return false;

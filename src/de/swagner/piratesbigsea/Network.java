@@ -100,7 +100,7 @@ public class Network {
 		                if (event.equals("init")) {
 		                	id = obj.getString("player");
 		                	place = obj.getInt("count"); 
-		                	addMessage("joined room " + obj.getString("room") + " as player " +  + obj.getInt("count"));
+		                	addMessage("joined room " + obj.getString("room") + " as player " +  obj.getInt("count"));
 		                	System.out.println(obj.getString("player") + ", " + obj.getInt("count"));
 		                }
 		                if (event.equals("connect")) {
